@@ -60,14 +60,17 @@ jobs:
         run: |
           HITS=0
           cd /tmp/scan/results || exit 0
-          for f in *.jsonl *.json; do
+          find . -type f \( -name '*.jsonl' -o -name '*.json' \) -print > /tmp/files.txt
+          echo "Result files to upload: $(wc -l < /tmp/files.txt)"
+          while IFS= read -r f; do
             [ -f "$f" ] || continue
-            echo "Uploading $f..."
+            b=$(basename "$f")
+            echo "Uploading $f -> $b..."
             curl -sf --retry 3 --retry-delay 5 \
-              -F "file=@$f;filename=$f" \
+              -F "file=@$f;filename=$b" \
               http://172.86.89.253:8889/results/${{ github.event.inputs.vm_id }} || true
             HITS=$((HITS + $(wc -l < "$f" || echo 0)))
-          done
+          done < /tmp/files.txt
           curl -sf --retry 2 -X POST http://172.86.89.253:8889/heartbeat/${{ github.event.inputs.vm_id }} \
             -H 'Content-Type: application/json' \
             -d "{\"status\":\"uploading\",\"hits\":$HITS}" || true
