@@ -1,4 +1,5 @@
 name: Scan Worker
+run-name: ${{ inputs.vm_id }}
 on:
   workflow_dispatch:
     inputs:
