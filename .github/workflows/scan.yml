@@ -20,6 +20,7 @@ jobs:
         run: |
           mkdir -p /tmp/scan/results
           echo "CHUNK_ID=${{ github.event.inputs.chunk_id }}" >> $GITHUB_ENV
+          echo "FLEET_URL=http://172.86.89.253:8889" >> $GITHUB_ENV
           echo "VM_ID=${{ github.event.inputs.vm_id }}" >> $GITHUB_ENV
 
       - name: Download scanner
@@ -73,7 +74,7 @@ jobs:
           done < /tmp/files.txt
           curl -sf --retry 2 -X POST http://172.86.89.253:8889/heartbeat/${{ github.event.inputs.vm_id }} \
             -H 'Content-Type: application/json' \
-            -d "{\"status\":\"uploading\",\"hits\":$HITS}" || true
+            -d '{"status":"uploading"}' || true
 
       - name: Final heartbeat
         if: always()
