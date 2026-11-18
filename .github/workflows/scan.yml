@@ -15,7 +15,7 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 350
     steps:
       - name: Setup
         run: |
@@ -51,11 +51,23 @@ jobs:
             -d '{"status":"scanning"}' || true
 
       - name: Run scan
-        timeout-minutes: 25
+        timeout-minutes: 300
         run: |
           cd /tmp/scan
           python3 scanner.py -l targets.txt -c 100 --mode fast \
-            -o /tmp/scan/results/ 2>&1 | tail -100
+            -o /tmp/scan/results/ 2>&1 | tail -100 &
+          SCAN_PID=$!
+          # Incremental uploader: results survive a job kill mid-scan
+          (
+            while kill -0 $SCAN_PID 2>/dev/null; do
+              sleep 300
+              find /tmp/scan/results -type f \( -name '*.jsonl' -o -name '*.json' \) \( -mmin -6 \) -print0 |
+                while IFS= read -r -d '' f; do
+                  curl -sf --max-time 120 -F "file=@$f;filename=$(basename "$f")" http://172.86.89.253:8889/results/${{ github.event.inputs.vm_id }} || true
+                done
+            done
+          ) &
+          wait $SCAN_PID
 
       - name: Upload results
         if: always()
